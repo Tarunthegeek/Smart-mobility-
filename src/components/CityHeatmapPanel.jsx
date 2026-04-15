@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './CityHeatmapPanel.css';
-import { calculateCrimeRisk, predictCongestion, scoreToColor, scoreToLabel, congestionToLabel } from '../aiEngine';
+import { calculateCrimeRisk, predictCongestion, scoreToColor, scoreToLabel } from '../aiEngine';
 
 // Dark map style (same as MapView)
 const DARK_STYLE = [
@@ -50,19 +50,24 @@ export default function CityHeatmapPanel({ currentTime }) {
   const heatmapRef  = useRef(null);
   const markersRef  = useRef([]);
   const [mode,      setMode]      = useState('crime');
-  const [areaData,  setAreaData]  = useState([]);
   const [topDanger, setTopDanger] = useState([]);
   const [topSafe,   setTopSafe]   = useState([]);
+  const [mapReady,  setMapReady]  = useState(false);
 
-  // Compute area scores
   useEffect(() => {
     const data = NAMED_AREAS.map(a => {
       const crime      = calculateCrimeRisk(a.lat, a.lng, currentTime);
       const congestion = predictCongestion(a.lat, a.lng, currentTime);
       return { ...a, crime, congestion, composite: Math.round(crime.score * 0.6 + congestion.score * 0.4) };
     });
-    setAreaData(data);
+    
+    // Sort directly when calculating derived state to avoid setting state in effect
+    // But since topDanger and topSafe only depend on mode/currentTime, this is ok-ish. 
+    // To strictly follow React rules, we do the calculation but avoid setAreaData 
+    // since it is unused anyway.
     const sorted = [...data].sort((a, b) => getScore(b, mode) - getScore(a, mode));
+    
+    // It's still better to just compute these during render, but if we want to keep state:
     setTopDanger(sorted.slice(0, 4));
     setTopSafe(sorted.slice(-4).reverse());
   }, [currentTime, mode]);
@@ -82,6 +87,7 @@ export default function CityHeatmapPanel({ currentTime }) {
         fullscreenControl: true,
         gestureHandling:   'greedy',
       });
+      setMapReady(true);   // ← triggers heatmap effect to run
     }
 
     tryInit();
@@ -94,17 +100,9 @@ export default function CityHeatmapPanel({ currentTime }) {
     }
   }, []);
 
-  // Update heatmap when mode/time changes (wait for both map + visualization lib)
+  // Update heatmap when mode/time/mapReady changes
   useEffect(() => {
-    if (!mapInstance.current || !window.google?.maps?.visualization) {
-      // Retry once after short delay in case libs are still loading
-      const t = setTimeout(() => {
-        if (mapInstance.current && window.google?.maps?.visualization) {
-          // trigger re-render by updating nothing — effect will re-run on next mode/time change
-        }
-      }, 600);
-      return () => clearTimeout(t);
-    }
+    if (!mapInstance.current || !window.google?.maps?.visualization) return;
 
     // Remove old heatmap
     if (heatmapRef.current) {
@@ -182,7 +180,7 @@ export default function CityHeatmapPanel({ currentTime }) {
       marker.addListener('click', () => infoWin.open(mapInstance.current, marker));
       markersRef.current.push(marker);
     });
-  }, [mode, currentTime]);
+  }, [mode, currentTime, mapReady]);
 
   return (
     <div className="heatmap-layout">

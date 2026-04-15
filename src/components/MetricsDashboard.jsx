@@ -4,7 +4,7 @@ import { scoreToColor, scoreToLabel, congestionToLabel } from '../aiEngine';
 
 export default function MetricsDashboard({
   analysis, weather, police,
-  timestamps = {}, refreshing = false, onRefresh, hasRoute,
+  refreshing = false, onRefresh, hasRoute,
 }) {
   if (!analysis) return null;
   const a = analysis;

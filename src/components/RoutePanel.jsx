@@ -20,7 +20,7 @@ const ROUTE_ICONS  = { fastest: '⚡', balanced: '⚖️', safest: '🛡️' };
 export default function RoutePanel({
   startAddr, onStartChange, onStartCoordChange,
   destAddr,  onDestChange,  onDestCoordChange,
-  userLocation, gpsStatus, onDetectLocation,
+  gpsStatus, onDetectLocation,
   onSearch, loading, loadingStep, error, mapsReady,
   routes, selectedRoute, onSelectRoute,
 }) {
@@ -31,7 +31,6 @@ export default function RoutePanel({
   const suggRef    = useRef(null);
 
   const [destFocused,  setDestFocused]  = useState(false);
-  const [startFocused, setStartFocused] = useState(false);
 
   // ── Attach Places Autocomplete ──────────────────
   useEffect(() => {
@@ -61,7 +60,7 @@ export default function RoutePanel({
         }
       });
     }
-  }, [mapsReady]);
+  }, [mapsReady, onDestChange, onDestCoordChange, onStartChange, onStartCoordChange]);
 
   // ── Close suggestion list on outside click ──────
   useEffect(() => {
@@ -121,8 +120,6 @@ export default function RoutePanel({
             value={startAddr}
             onChange={e => { onStartChange(e.target.value); onStartCoordChange(null); }}
             onKeyDown={handleKey}
-            onFocus={() => setStartFocused(true)}
-            onBlur={() => setStartFocused(false)}
             disabled={loading}
             autoComplete="off"
           />

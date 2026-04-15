@@ -44,7 +44,8 @@ export function loadGoogleMapsScript(apiKey) {
 export function useGoogleMaps(apiKey) {
   const [maps, setMaps]       = useState(null);
   const [error, setError]     = useState(null);
-  const [loading, setLoading] = useState(false);
+  // Start as loading=true when a key is available so the UI never sees loading=false+maps=null
+  const [loading, setLoading] = useState(!!apiKey);
 
   useEffect(() => {
     if (!apiKey) return;

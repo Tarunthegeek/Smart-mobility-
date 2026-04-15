@@ -380,9 +380,6 @@ export default function MapView({
 }
 
 // ── Info window helpers ──────────────────────────────────────
-function makeInfoWindow(content) {
-  return new window.google.maps.InfoWindow({ content, maxWidth: 280 });
-}
 
 function makeInfoHtml({ title, rows = [], sub }) {
   const rowsHtml = rows.map(r => `

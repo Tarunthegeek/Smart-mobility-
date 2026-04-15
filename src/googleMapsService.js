@@ -170,7 +170,7 @@ export async function fetchGoogleRoutes(originLat, originLng, destLat, destLng) 
     destination: new window.google.maps.LatLng(destLat, destLng),
     travelMode:  window.google.maps.TravelMode.DRIVING,
     drivingOptions: {
-      departureTime: new Date(),
+      departureTime: new Date(Date.now() + 60000), // 1 min in future to avoid INVALID_REQUEST
       trafficModel:  window.google.maps.TrafficModel.BEST_GUESS,
     },
     unitSystem: window.google.maps.UnitSystem.METRIC,
@@ -181,7 +181,12 @@ export async function fetchGoogleRoutes(originLat, originLng, destLat, destLng) 
     return await callDirections(svc, { ...baseReq, provideRouteAlternatives: true });
   } catch (err) {
     if (['MAX_ROUTE_LENGTH_EXCEEDED', 'UNKNOWN_ERROR', 'INVALID_REQUEST'].includes(err.status)) {
-      return await callDirections(svc, { ...baseReq, provideRouteAlternatives: false });
+      const fallbackReq = { ...baseReq, provideRouteAlternatives: false };
+      // If INVALID_REQUEST, it may be due to drivingOptions on restricted API keys
+      if (err.status === 'INVALID_REQUEST') {
+        delete fallbackReq.drivingOptions;
+      }
+      return await callDirections(svc, fallbackReq);
     }
     throw err;
   }
