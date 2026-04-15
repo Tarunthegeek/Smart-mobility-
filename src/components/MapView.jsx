@@ -294,13 +294,26 @@ export default function MapView({
     const selGRoute = directionsResult.routes[selIdx];
     if (selGRoute) {
       const bounds = new window.google.maps.LatLngBounds();
-      selGRoute.legs.forEach(leg => {
-        bounds.extend(leg.start_location);
-        bounds.extend(leg.end_location);
-        if (leg.overview_path) leg.overview_path.forEach(p => bounds.extend(p));
-      });
+
+      // Use overview_path (on the route, NOT the leg)
+      if (selGRoute.overview_path?.length) {
+        selGRoute.overview_path.forEach(p => bounds.extend(p));
+      } else {
+        // Fallback: use leg start/end + all step paths
+        selGRoute.legs.forEach(leg => {
+          bounds.extend(leg.start_location);
+          bounds.extend(leg.end_location);
+          (leg.steps || []).forEach(step => {
+            if (step.start_location) bounds.extend(step.start_location);
+            if (step.end_location)   bounds.extend(step.end_location);
+          });
+        });
+      }
+
+      // Always include user's pin and destination pin
       if (userLocation?.lat) bounds.extend({ lat: userLocation.lat, lng: userLocation.lng });
       if (destCoord?.lat)    bounds.extend({ lat: destCoord.lat,    lng: destCoord.lng    });
+
       if (!bounds.isEmpty()) {
         mapInst.current.fitBounds(bounds, { top: 80, right: 60, bottom: 100, left: 20 });
       }
