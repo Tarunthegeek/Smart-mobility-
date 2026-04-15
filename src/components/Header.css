@@ -1,0 +1,223 @@
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 24px;
+  background: rgba(5, 11, 24, 0.95);
+  backdrop-filter: blur(30px);
+  border-bottom: 1px solid var(--border-glass);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  gap: 16px;
+}
+
+/* Logo */
+.logo-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.logo-icon {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 210, 255, 0.1);
+  border: 1px solid rgba(0, 210, 255, 0.2);
+  border-radius: 10px;
+  animation: float 3s ease-in-out infinite;
+}
+
+.logo-title {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.2;
+  letter-spacing: -0.3px;
+}
+
+.logo-sub {
+  font-size: 10px;
+  color: var(--text-muted);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+/* Center status bar */
+.city-status-bar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-glass);
+  border-radius: 30px;
+  padding: 8px 20px;
+}
+
+.status-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.status-label {
+  font-size: 9px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+
+.status-val {
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 600;
+  transition: color 0.5s ease;
+}
+
+.status-divider {
+  width: 1px;
+  height: 24px;
+  background: var(--border-glass);
+}
+
+.live-indicator {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.live-text {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--accent-green);
+  letter-spacing: 1.5px;
+}
+
+/* Right clock */
+.header-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.time-display {
+  text-align: right;
+}
+
+.time-clock {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: 1px;
+}
+
+.time-date {
+  font-size: 10px;
+  color: var(--text-muted);
+  letter-spacing: 0.5px;
+}
+
+.header-badge {
+  font-size: 9px !important;
+}
+
+/* ════════════════════════════════════════
+   MOBILE HEADER — slim 48px, logo + time
+   ════════════════════════════════════════ */
+@media (max-width: 768px) {
+  .app-header {
+    padding: 0 16px;
+    height: 52px;
+    min-height: 52px;
+    gap: 0;
+  }
+  .header-center { display: none; }
+  .header-badges { display: none; }
+
+  .logo-icon {
+    width: 32px; height: 32px;
+    border-radius: 8px;
+  }
+  .logo-title { font-size: 15px; }
+  .logo-sub   { display: none; }
+
+  /* Show just the time on the right — compact */
+  .header-right {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+  }
+  .time-display { text-align: right; }
+  .time-clock   { font-size: 13px; letter-spacing: 0.5px; }
+  .time-date    { display: none; }
+
+  /* Live dot visible on mobile */
+  .gmaps-badge  { display: none; }
+}
+
+@media (max-width: 480px) {
+  .app-header { padding: 0 12px; height: 48px; min-height: 48px; }
+  .logo-title  { font-size: 14px; }
+  .time-clock  { font-size: 12px; }
+}
+
+
+/* Badges group */
+.header-badges {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.header-badge { font-size: 9px !important; }
+
+/* Google Maps connected badge */
+.gmaps-badge {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: 10px;
+  background: rgba(66,133,244,0.12);
+  border: 1px solid rgba(66,133,244,0.25);
+  color: #5b9cf6;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+}
+
+.gmaps-dot {
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #4285f4;
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+/* Reset key button */
+.reset-key-btn {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 6px;
+  padding: 4px 7px;
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+  transition: all 0.2s ease;
+  opacity: 0.7;
+}
+.reset-key-btn:hover {
+  opacity: 1;
+  background: rgba(255,215,64,0.1);
+  border-color: rgba(255,215,64,0.25);
+}
+
