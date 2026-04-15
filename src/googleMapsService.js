@@ -21,26 +21,53 @@ function fetchWithTimeout(url, ms = 8000) {
 // ─────────────────────────────────────────────
 //  GEOCODING
 // ─────────────────────────────────────────────
+/**
+ * geocodeAddress — multi-strategy geocoder for complex/long addresses.
+ * Strategy 1: Full address + India restriction (most accurate)
+ * Strategy 2: Full address without restriction (broader search)
+ * Strategy 3: Cleaned address (first 2 meaningful parts) without restriction
+ *
+ * This ensures long/complicated addresses like:
+ * "Plot No. 45, Block B, Sector 18, Noida, Uttar Pradesh 201301"
+ * reliably resolve to correct coordinates.
+ */
 export function geocodeAddress(address) {
   return new Promise((resolve, reject) => {
     if (!window.google?.maps?.Geocoder) {
       reject(new Error('Google Maps not loaded yet.')); return;
     }
-    new window.google.maps.Geocoder().geocode(
-      { address, componentRestrictions: { country: 'IN' } },
-      (results, status) => {
+    const gc = new window.google.maps.Geocoder();
+
+    // Clean helper: strip extra whitespace/punctuation
+    const clean = (addr) => addr.trim().replace(/\s+/g, ' ');
+
+    // Attempt geocode — returns Promise<result|null>
+    const attempt = (query, opts) => new Promise(res => {
+      gc.geocode({ address: clean(query), ...opts }, (results, status) => {
         if (status === 'OK' && results?.[0]) {
           const loc = results[0].geometry.location;
-          resolve({ lat: loc.lat(), lng: loc.lng(), display: results[0].formatted_address });
+          res({ lat: loc.lat(), lng: loc.lng(), display: results[0].formatted_address });
         } else {
-          reject(new Error(
-            status === 'ZERO_RESULTS'
-              ? `"${address}" not found. Try adding city/state name.`
-              : `Geocoding failed (${status}). Check your connection.`
-          ));
+          res(null);
         }
-      }
-    );
+      });
+    });
+
+    // Build a simplified version of the address (last N comma-parts are often pin/state)
+    const parts      = address.split(',').map(p => p.trim()).filter(Boolean);
+    // Try dropping leading hyper-specific parts (plot numbers, flat numbers)
+    const simplified = parts.length > 3
+      ? parts.slice(Math.max(0, parts.length - 3)).join(', ')
+      : address;
+
+    // Run strategies in series, resolve on first success
+    attempt(address, { componentRestrictions: { country: 'IN' } })
+      .then(r => r || attempt(address, {}))
+      .then(r => r || attempt(simplified, {}))
+      .then(r => {
+        if (r) resolve(r);
+        else reject(new Error(`"${parts[0] || address}" could not be found. Try a shorter or more common address.`));
+      });
   });
 }
 
