@@ -23,13 +23,8 @@ function fetchWithTimeout(url, ms = 8000) {
 // ─────────────────────────────────────────────
 /**
  * geocodeAddress — multi-strategy geocoder for complex/long addresses.
- * Strategy 1: Full address + India restriction (most accurate)
- * Strategy 2: Full address without restriction (broader search)
- * Strategy 3: Cleaned address (first 2 meaningful parts) without restriction
- *
- * This ensures long/complicated addresses like:
- * "Plot No. 45, Block B, Sector 18, Noida, Uttar Pradesh 201301"
- * reliably resolve to correct coordinates.
+ * Handles: Plus Codes (VG6H+FVQ), long addresses, pincode-only, landmarks.
+ * Validates result is within India bounds to prevent cross-country routing bugs.
  */
 export function geocodeAddress(address) {
   return new Promise((resolve, reject) => {
@@ -38,35 +33,58 @@ export function geocodeAddress(address) {
     }
     const gc = new window.google.maps.Geocoder();
 
-    // Clean helper: strip extra whitespace/punctuation
-    const clean = (addr) => addr.trim().replace(/\s+/g, ' ');
+    // India bounding box — reject anything outside
+    const INDIA = { minLat: 6.0, maxLat: 37.5, minLng: 68.0, maxLng: 97.5 };
+    const inIndia = (lat, lng) =>
+      lat >= INDIA.minLat && lat <= INDIA.maxLat &&
+      lng >= INDIA.minLng && lng <= INDIA.maxLng;
+
+    // Detect Plus Code (e.g. VG6H+FVQ or 7JVW+3P Delhi)
+    const isPlusCode = /^[23456789CFGHJMPQRVWX]{4}\+[23456789CFGHJMPQRVWX]{2,}/.test(address.trim());
 
     // Attempt geocode — returns Promise<result|null>
     const attempt = (query, opts) => new Promise(res => {
-      gc.geocode({ address: clean(query), ...opts }, (results, status) => {
+      const cleanQ = query.trim().replace(/\s+/g, ' ');
+      gc.geocode({ address: cleanQ, ...opts }, (results, status) => {
         if (status === 'OK' && results?.[0]) {
           const loc = results[0].geometry.location;
-          res({ lat: loc.lat(), lng: loc.lng(), display: results[0].formatted_address });
+          const lat = loc.lat(), lng = loc.lng();
+          // Only accept results within India
+          if (inIndia(lat, lng)) {
+            res({ lat, lng, display: results[0].formatted_address });
+          } else {
+            res(null);  // discard out-of-India results
+          }
         } else {
           res(null);
         }
       });
     });
 
-    // Build a simplified version of the address (last N comma-parts are often pin/state)
     const parts      = address.split(',').map(p => p.trim()).filter(Boolean);
-    // Try dropping leading hyper-specific parts (plot numbers, flat numbers)
     const simplified = parts.length > 3
       ? parts.slice(Math.max(0, parts.length - 3)).join(', ')
       : address;
 
-    // Run strategies in series, resolve on first success
+    // Plus Code: skip country restriction (it confuses the geocoder)
+    if (isPlusCode) {
+      attempt(address, {})
+        .then(r => r || attempt(simplified + ', India', {}))
+        .then(r => {
+          if (r) resolve(r);
+          else reject(new Error(`Plus Code "${parts[0]}" could not be resolved. Try adding city name.`));
+        });
+      return;
+    }
+
+    // Standard address: 3-strategy fallback
     attempt(address, { componentRestrictions: { country: 'IN' } })
       .then(r => r || attempt(address, {}))
       .then(r => r || attempt(simplified, {}))
+      .then(r => r || attempt(simplified + ', India', {}))
       .then(r => {
         if (r) resolve(r);
-        else reject(new Error(`"${parts[0] || address}" could not be found. Try a shorter or more common address.`));
+        else reject(new Error(`"${parts[0] || address}" not found. Try a shorter or more specific address.`));
       });
   });
 }
@@ -125,10 +143,20 @@ export async function fetchGoogleRoutes(originLat, originLng, destLat, destLng) 
   if (!window.google?.maps?.DirectionsService)
     throw new Error('Google Maps not ready.');
 
-  // Validate coordinates
+  // Basic validity
   const vals = [originLat, originLng, destLat, destLng];
   if (vals.some(v => v == null || isNaN(v) || !isFinite(v)))
     throw new Error('Invalid coordinates — please re-enter your locations.');
+
+  // India bounding box (same as geocoder)
+  const inIndia = (lat, lng) =>
+    lat >= 6.0 && lat <= 37.5 && lng >= 68.0 && lng <= 97.5;
+
+  if (!inIndia(originLat, originLng))
+    throw new Error('Start location is outside India. Please verify the address.');
+  if (!inIndia(destLat, destLng))
+    throw new Error('Destination is outside India. Please verify the address.');
+
   if (Math.abs(originLat) < 0.001 && Math.abs(originLng) < 0.001)
     throw new Error('Start location coordinates are invalid. Use the search box.');
   if (Math.abs(destLat) < 0.001 && Math.abs(destLng) < 0.001)
